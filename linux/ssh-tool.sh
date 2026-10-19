@@ -58,6 +58,24 @@ change_ssh_port() {
     fi
 }
 
+# 修改系统用户密码的函数
+change_user_password() {
+    echo ""
+    echo "----------------------------------------"
+    echo "安全提醒：已切回密码登录，建议更新当前用户的登录密码。"
+    printf "是否需要立即修改当前用户的密码？[Y/n]: "
+    read MODIFY_PWD_CONFIRM
+    case "$MODIFY_PWD_CONFIRM" in
+        [nN]|[nN][oO])
+            echo "-> 跳过密码修改。"
+            ;;
+        *)
+            echo "-> 正在调用 passwd 修改当前用户密码："
+            passwd
+            ;;
+    esac
+}
+
 echo "========================================"
 echo "          SSH 综合配置与管理工具"
 echo "========================================"
@@ -145,6 +163,8 @@ if [ "$AUTH_MODE" != "5" ]; then
             set_sshd_config "PasswordAuthentication" "yes"
             set_sshd_config "PermitRootLogin" "yes"
             echo "-> SSH 配置已修改为：仅密码登录 (已禁用密钥)"
+            # 触发修改密码提示
+            change_user_password
             ;;
     esac
 
@@ -174,7 +194,6 @@ fi
 echo "-> 正在重启 SSH 服务..."
 if command -v systemctl >/dev/null 2>&1; then
     systemctl daemon-reload 2>/dev/null
-    # 处理 Ubuntu 22.04+ / Debian 12+ 的 systemd socket 激活机制导致改端口不生效的问题
     if systemctl is-active --quiet ssh.socket 2>/dev/null; then
         systemctl stop ssh.socket 2>/dev/null
         systemctl disable ssh.socket 2>/dev/null
@@ -192,6 +211,6 @@ fi
 echo "========================================"
 echo "              操作全部完成！"
 if [ -n "$NEW_PORT" ]; then
-    echo "  请确保云服务商安全组/防火墙已放行端口: $NEW_PORT"
+    echo "  请确保防火墙已放行端口: $NEW_PORT"
 fi
 echo "========================================"
