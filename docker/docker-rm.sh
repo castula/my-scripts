@@ -22,21 +22,16 @@ done
 echo "========================================================="
 
 # 提示用户输入
-read -p "请输入要删除的容器编号（支持连续输入如 123）： " input
+read -p "请输入要删除的容器编号（支持空格或逗号分隔，如 1, 4, 14）： " input
 
 if [ -z "$input" ]; then
     echo "未输入任何编号，退出。"
     exit 0
 fi
 
-# 判断输入是连续数字（如 123）还是带空格的输入
-if [[ "$input" =~ ^[0-9]+$ ]]; then
-    # 如果是连续数字，拆分成单个字符数组
-    selected=($(echo "$input" | grep -o .))
-else
-    # 如果包含空格，按空格分割
-    selected=($input)
-fi
+# 将中文逗号替换为英文逗号，然后用正则将所有逗号或空格替换为空格，最后拆分成数组
+formatted_input=$(echo "$input" | tr '，' ',' | tr ',' ' ')
+read -ra selected <<< "$formatted_input"
 
 # 记录成功删除的容器数量
 success_count=0
@@ -57,7 +52,6 @@ for num in "${selected[@]}"; do
         
         echo "-------------------------------------------------------"
         echo "正在强制删除容器: $cname ($cid)..."
-        # 使用 -f 参数一步到位（自动停止并删除）
         docker rm -f "$cid" >/dev/null 2>&1
         echo "✅ 容器 $cname 已成功删除。"
         ((success_count++))
