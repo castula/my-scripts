@@ -123,7 +123,7 @@ clean_debian() {
 }
 
 # ============================================
-#  通用清理（含历史记录、wget 痕迹清除）
+#  通用清理（静默清空各类历史与痕迹文件）
 # ============================================
 clean_common() {
     log_info "执行通用清理..."
@@ -133,30 +133,19 @@ clean_common() {
         docker system prune -af --volumes 2>/dev/null || true
     fi
     
-    # 1. 清理命令历史 (Bash / Zsh / Ash 等)
-    log_info "清理 Shell 命令历史记录..."
+    # 清理内存中的历史
     history -c 2>/dev/null || true
-    history -w 2>/dev/null || true
+    export HISTSIZE=0 2>/dev/null || true
+
+    # 静默清空各类历史文件与 wget hsts 记录
+    local target_files=(".bash_history" ".ash_history" ".zsh_history" ".ksh_history" ".sh_history" ".mysql_history" ".python_history" ".wget-hsts")
     
-    # 清理 root 及所有用户家目录下的 Shell 历史文件
-    local history_files=(".bash_history" ".ash_history" ".zsh_history" ".ksh_history" ".sh_history" ".mysql_history" ".python_history")
-    
-    for hfile in "${history_files[@]}"; do
-        [ -f "/root/$hfile" ] && > "/root/$hfile" 2>/dev/null || true
+    for tfile in "${target_files[@]}"; do
+        [ -f "/root/$tfile" ] && > "/root/$tfile" 2>/dev/null || true
         for user_home in /home/*; do
-            [ -f "$user_home/$hfile" ] && > "$user_home/$hfile" 2>/dev/null || true
+            [ -f "$user_home/$tfile" ] && > "$user_home/$tfile" 2>/dev/null || true
         done
     done
-    
-    # 2. 清理 Wget 历史与 HSTS 记录
-    log_info "清理 Wget 下载历史与 HSTS 记录..."
-    rm -f /root/.wget-hsts 2>/dev/null || true
-    for user_home in /home/*; do
-        rm -f "$user_home/.wget-hsts" 2>/dev/null || true
-    done
-    
-    # 3. 彻底禁用当前会话的历史记录写入（可选）
-    export HISTSIZE=0 2>/dev/null || true
     
     # 清理空文件和目录
     find /var/log -type f -empty -delete 2>/dev/null || true
